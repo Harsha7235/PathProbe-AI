@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+venv/
+.venv/
+
+# Large/generated files
+*.pcap
+*.pcapng
+*.xml
+
+# Generated datasets
+dataset/raw/*
+dataset/processed/*
+
+# Generated models
+models/*.pt
+models/*.pth
+models/*.onnx
+
+# Results
+results/figures/*
+
+# Temporary files
+*.log
+*.tmp
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
