@@ -1,0 +1,45 @@
+{
+    "probes": [
+        {
+            "id": "P1",
+            "name": "baseline",
+            "description": "Normal UDP traffic used to establish the reference behavior",
+            "parameters": {
+                "packet_size_bytes": [512, 1024],
+                "packet_rate_pps": [50]
+            }
+        },
+        {
+            "id": "P2",
+            "name": "packet_size_sweep",
+            "description": "Tests the response of the path to different packet sizes",
+            "parameters": {
+                "packet_size_bytes": [64, 128, 256, 512, 1024, 1200, 1400, 1500, 1600]
+            }
+        },
+        {
+            "id": "P3",
+            "name": "rate_sweep",
+            "description": "Tests the path response under different offered traffic rates",
+            "parameters": {
+                "packet_rate_pps": [10, 25, 50, 100, 200, 500]
+            }
+        },
+        {
+            "id": "P4",
+            "name": "dscp_variation",
+            "description": "Tests whether packet treatment changes with DSCP marking",
+            "parameters": {
+                "dscp": [0, 8, 16, 24, 32, 46]
+            }
+        },
+        {
+            "id": "P5",
+            "name": "ttl_variation",
+            "description": "Tests path response under different TTL values",
+            "parameters": {
+                "ttl": [32, 64, 128, 255]
+            }
+        }
+    ]
+}
