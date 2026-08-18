@@ -6,14 +6,21 @@ from datetime import datetime
 
 
 # ============================================================
-# PATH CONFIGURATION
+# PATHS
 # ============================================================
 
 PROJECT_DIR = Path("/mnt/c/Projects/PathProbe-AI")
 NS3_DIR = Path("/home/harsha/ns-3.48")
 
-OUTPUT_DIR = PROJECT_DIR / "dataset" / "raw"
+EXECUTABLE = (
+    NS3_DIR
+    / "build"
+    / "scratch"
+    / "pathprobe"
+    / "ns3.48-pathprobe_baseline-default"
+)
 
+OUTPUT_DIR = PROJECT_DIR / "dataset" / "raw"
 OUTPUT_FILE = OUTPUT_DIR / "probe_observations.csv"
 
 
@@ -25,30 +32,17 @@ PROBE_ID = "P1"
 PROBE_NAME = "baseline"
 
 
-# IMPORTANT:
-# Change this ONLY if your current working ns-3 command
-# uses a different target.
-
-NS3_TARGET = "scratch/pathprobe/pathprobe_baseline"
-
-
 # ============================================================
 # RUN NS-3
 # ============================================================
 
 def run_ns3():
 
-    executable = (
-        NS3_DIR
-        / "build"
-        / "scratch"
-        / "pathprobe"
-        / "ns3.48-pathprobe_baseline-default"
-    )
-
-    command = [
-        str(executable)
-    ]
+    if not EXECUTABLE.exists():
+        raise FileNotFoundError(
+            f"Baseline executable not found:\n{EXECUTABLE}\n\n"
+            "Build ns-3 first with ./ns3 build"
+        )
 
     print()
     print("========================================")
@@ -57,14 +51,8 @@ def run_ns3():
     print("========================================")
     print()
 
-    if not executable.exists():
-        raise FileNotFoundError(
-            f"ns-3 executable not found:\n{executable}\n\n"
-            "Run './ns3 build' inside ns-3 first."
-        )
-
     result = subprocess.run(
-        command,
+        [str(EXECUTABLE)],
         cwd=NS3_DIR,
         capture_output=True,
         text=True,
@@ -75,34 +63,31 @@ def run_ns3():
     print(result.stdout)
 
     if result.returncode != 0:
-
         print(result.stderr)
-
-        raise RuntimeError(
-            "P1 ns-3 execution failed."
-        )
+        raise RuntimeError("P1 ns-3 execution failed.")
 
     return result.stdout
 
+
 # ============================================================
-# EXTRACT NS-3 RESULTS
+# EXTRACT VALUE
 # ============================================================
 
 def extract_value(pattern, output):
 
-    match = re.search(
-        pattern,
-        output
-    )
+    match = re.search(pattern, output)
 
     if not match:
-
         raise ValueError(
-            f"Could not extract: {pattern}"
+            f"Could not extract value using pattern: {pattern}"
         )
 
     return float(match.group(1))
 
+
+# ============================================================
+# PARSE NS-3 RESULTS
+# ============================================================
 
 def parse_results(output):
 
@@ -159,6 +144,8 @@ def save_observation(results):
         "timestamp",
         "probe_id",
         "probe_name",
+        "parameter",
+        "parameter_value",
         "packets_sent",
         "packets_received",
         "packet_loss_percent",
@@ -187,6 +174,8 @@ def save_observation(results):
             "timestamp": datetime.now().isoformat(),
             "probe_id": PROBE_ID,
             "probe_name": PROBE_NAME,
+            "parameter": "baseline",
+            "parameter_value": 0,
             **results
         })
 
@@ -199,13 +188,9 @@ def main():
 
     output = run_ns3()
 
-    results = parse_results(
-        output
-    )
+    results = parse_results(output)
 
-    save_observation(
-        results
-    )
+    save_observation(results)
 
     print()
     print("========================================")
@@ -214,10 +199,7 @@ def main():
     print()
 
     for key, value in results.items():
-
-        print(
-            f"{key:25} : {value}"
-        )
+        print(f"{key:25} : {value}")
 
     print()
     print(f"Saved to: {OUTPUT_FILE}")
