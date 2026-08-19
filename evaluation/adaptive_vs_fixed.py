@@ -1,35 +1,34 @@
+import csv
 import subprocess
-import re
 from pathlib import Path
-
+from statistics import mean
 
 NS3_DIR = Path("/home/harsha/ns-3.48")
 
-E0 = (
-    NS3_DIR
-    / "build"
-    / "scratch"
-    / "ns3.48-pathprobe_rate-default"
-)
+ENVIRONMENTS = {
+    "E0": {
+        "name": "NORMAL",
+        "binary": "build/scratch/ns3.48-pathprobe_rate-default",
+    },
+    "E1": {
+        "name": "RATE_LIMITED",
+        "binary": "build/scratch/ns3.48-pathprobe_rate_limited-default",
+    },
+    "E2": {
+        "name": "DELAY",
+        "binary": "build/scratch/ns3.48-pathprobe_delay_jitter-default",
+    },
+}
 
-E1 = (
-    NS3_DIR
-    / "build"
-    / "scratch"
-    / "ns3.48-pathprobe_rate_limited-default"
-)
-
-
-RATES = [50, 100, 200, 500]
+PROBE_RATES = [50, 100, 200, 500]
 
 
 def run_probe(environment, rate):
-
-    executable = E0 if environment == "E0" else E1
+    binary = NS3_DIR / ENVIRONMENTS[environment]["binary"]
 
     command = [
-        str(executable),
-        f"--packetsPerSecond={rate}"
+        str(binary),
+        f"--packetsPerSecond={rate}",
     ]
 
     if environment == "E1":
@@ -41,203 +40,271 @@ def run_probe(environment, rate):
         capture_output=True,
         text=True,
         encoding="utf-8",
-        errors="replace"
+        errors="replace",
     )
 
     if result.returncode != 0:
         raise RuntimeError(
-            result.stderr
+            f"ns-3 failed for {environment} at {rate} pps\n"
+            + result.stderr
         )
 
     output = result.stdout
 
-    loss = float(
-        re.search(
-            r"Packet Loss\s*:\s*([\d.]+)",
-            output
-        ).group(1)
-    )
-
-    delay = float(
-        re.search(
-            r"Average Delay\s*:\s*([\d.]+)",
-            output
-        ).group(1)
-    )
-
-    throughput = float(
-        re.search(
-            r"Throughput\s*:\s*([\d.]+)",
-            output
-        ).group(1)
-    )
-
-    return {
+    metrics = {
         "rate": rate,
-        "loss": loss,
-        "delay": delay,
-        "throughput": throughput
+        "loss": 0.0,
+        "delay": 0.0,
+        "throughput": 0.0,
     }
 
+    for line in output.splitlines():
+        line = line.strip()
 
-def fixed_strategy(environment):
+        if line.startswith("Packet Loss"):
+            metrics["loss"] = float(
+                line.split(":")[1].replace("%", "").strip()
+            )
 
-    observations = []
+        elif line.startswith("Average Delay"):
+            metrics["delay"] = float(
+                line.split(":")[1].replace("ms", "").strip()
+            )
 
-    for rate in RATES:
+        elif line.startswith("Throughput"):
+            metrics["throughput"] = float(
+                line.split(":")[1].replace("Mbps", "").strip()
+            )
 
-        result = run_probe(
-            environment,
-            rate
-        )
+    return metrics
 
-        observations.append(result)
 
-    return observations
+def classify(observations):
+    if not observations:
+        return "UNKNOWN"
+
+    latest = observations[-1]
+
+    # Strong rate-limited signature
+    for obs in observations:
+        if obs["loss"] > 5 and obs["delay"] >= 100:
+            return "RATE_LIMITED"
+
+    # Persistent delay signature
+    high_delay = [
+        obs for obs in observations
+        if obs["delay"] >= 100 and obs["loss"] == 0
+    ]
+
+    if len(high_delay) >= 2:
+        return "DELAY"
+
+    # Normal only after high-load validation
+    if (
+        latest["rate"] >= 200
+        and latest["loss"] == 0
+        and latest["delay"] < 50
+    ):
+        return "NORMAL"
+
+    return "UNKNOWN"
 
 
 def adaptive_strategy(environment):
-
     observations = []
 
-    # Start with a moderate probe.
-    rate = 100
-
-    while True:
-
-        result = run_probe(
-            environment,
-            rate
-        )
-
+    for rate in PROBE_RATES:
+        result = run_probe(environment, rate)
         observations.append(result)
 
-        loss = result["loss"]
-        delay = result["delay"]
+        diagnosis = classify(observations)
 
-        # Strong evidence of rate limiting.
-        if loss >= 20 and delay >= 100:
-            break
+        if diagnosis != "UNKNOWN":
+            return diagnosis, observations
 
-        # Normal behavior at 100 pps:
-        # test the boundary.
-        if rate == 100:
-            rate = 200
-            continue
-
-        # If abnormal behavior appears,
-        # diagnosis is sufficient.
-        if loss > 0 or delay > 50:
-            break
-
-        # Otherwise perform stress test.
-        if rate == 200:
-            rate = 500
-            continue
-
-        break
-
-    return observations
+    return classify(observations), observations
 
 
-def diagnose(observations):
+def fixed_strategy(environment):
+    observations = []
 
-    for observation in observations:
+    for rate in PROBE_RATES:
+        result = run_probe(environment, rate)
+        observations.append(result)
 
-        if (
-            observation["loss"] >= 20
-            and observation["delay"] >= 100
-        ):
-            return "RATE_LIMITED"
-
-    return "NORMAL"
+    return classify(observations), observations
 
 
-def print_results(
-    strategy,
+def print_result(
     environment,
-    observations
+    strategy,
+    diagnosis,
+    observations,
 ):
-
-    diagnosis = diagnose(
-        observations
-    )
-
     print()
     print("----------------------------------------")
-    print(f"{strategy}")
+    print(f"Environment : {environment}")
+    print(f"Strategy    : {strategy}")
+    print(f"Diagnosis   : {diagnosis}")
+    print(f"Probes      : {len(observations)}")
     print("----------------------------------------")
 
-    print(
-        f"Ground truth : {environment}"
-    )
-
-    print(
-        f"Diagnosis    : {diagnosis}"
-    )
-
-    print(
-        f"Probes used  : {len(observations)}"
-    )
-
-    for observation in observations:
-
+    for obs in observations:
         print(
-            f"{observation['rate']:4} pps | "
-            f"Loss {observation['loss']:6.2f}% | "
-            f"Delay {observation['delay']:7.2f} ms"
+            f"{obs['rate']:>4} pps | "
+            f"Loss {obs['loss']:>6.2f}% | "
+            f"Delay {obs['delay']:>7.2f} ms | "
+            f"TP {obs['throughput']:>8.4f} Mbps"
         )
 
 
 def main():
+    print()
+    print("========================================")
+    print("   PATHPROBE-AI")
+    print("   ADAPTIVE VS FIXED EVALUATION")
+    print("========================================")
+
+    results = []
+
+    for environment in ENVIRONMENTS:
+        print()
+        print(f"========== TESTING {environment} ==========")
+
+        adaptive_diag, adaptive_obs = adaptive_strategy(
+            environment
+        )
+
+        fixed_diag, fixed_obs = fixed_strategy(
+            environment
+        )
+
+        actual = ENVIRONMENTS[environment]["name"]
+
+        print_result(
+            environment,
+            "ADAPTIVE",
+            adaptive_diag,
+            adaptive_obs,
+        )
+
+        print_result(
+            environment,
+            "FIXED",
+            fixed_diag,
+            fixed_obs,
+        )
+
+        results.append({
+            "environment": environment,
+            "actual": actual,
+            "adaptive_diagnosis": adaptive_diag,
+            "adaptive_probes": len(adaptive_obs),
+            "fixed_diagnosis": fixed_diag,
+            "fixed_probes": len(fixed_obs),
+        })
+
+    adaptive_accuracy = mean(
+        r["adaptive_diagnosis"] == r["actual"]
+        for r in results
+    )
+
+    fixed_accuracy = mean(
+        r["fixed_diagnosis"] == r["actual"]
+        for r in results
+    )
+
+    adaptive_avg = mean(
+        r["adaptive_probes"]
+        for r in results
+    )
+
+    fixed_avg = mean(
+        r["fixed_probes"]
+        for r in results
+    )
+
+    reduction = (
+        (fixed_avg - adaptive_avg)
+        / fixed_avg
+        * 100
+    )
 
     print()
     print("========================================")
-    print(" PATHPROBE-AI")
-    print(" ADAPTIVE VS FIXED EVALUATION")
+    print("          FINAL COMPARISON")
     print("========================================")
 
-    for environment in ["E0", "E1"]:
+    print(
+        f"Adaptive Accuracy       : "
+        f"{adaptive_accuracy * 100:.2f}%"
+    )
 
-        print()
+    print(
+        f"Fixed Accuracy          : "
+        f"{fixed_accuracy * 100:.2f}%"
+    )
+
+    print(
+        f"Adaptive Avg Probes     : "
+        f"{adaptive_avg:.2f}"
+    )
+
+    print(
+        f"Fixed Avg Probes        : "
+        f"{fixed_avg:.2f}"
+    )
+
+    print(
+        f"Probe Reduction         : "
+        f"{reduction:.2f}%"
+    )
+
+    print()
+    print("Environment Results")
+    print("----------------------------------------")
+
+    for r in results:
         print(
-            f"========== {environment} =========="
+            f"{r['environment']} | "
+            f"Actual: {r['actual']} | "
+            f"Adaptive: {r['adaptive_diagnosis']} "
+            f"({r['adaptive_probes']} probes) | "
+            f"Fixed: {r['fixed_diagnosis']} "
+            f"({r['fixed_probes']} probes)"
         )
 
-        fixed = fixed_strategy(
-            environment
+    output_dir = Path(
+        "/mnt/c/Projects/PathProbe-AI/dataset/results"
+    )
+
+    output_dir.mkdir(
+        parents=True,
+        exist_ok=True
+    )
+
+    output_file = (
+        output_dir / "adaptive_vs_fixed.csv"
+    )
+
+    with open(
+        output_file,
+        "w",
+        newline="",
+    ) as f:
+
+        writer = csv.DictWriter(
+            f,
+            fieldnames=results[0].keys()
         )
 
-        adaptive = adaptive_strategy(
-            environment
-        )
+        writer.writeheader()
+        writer.writerows(results)
 
-        print_results(
-            "FIXED STRATEGY",
-            environment,
-            fixed
-        )
-
-        print_results(
-            "ADAPTIVE STRATEGY",
-            environment,
-            adaptive
-        )
-
-        fixed_count = len(fixed)
-        adaptive_count = len(adaptive)
-
-        reduction = (
-            (fixed_count - adaptive_count)
-            / fixed_count
-            * 100
-        )
-
-        print()
-        print(
-            f"Probe reduction: "
-            f"{reduction:.2f}%"
-        )
+    print()
+    print(
+        f"Saved results to: {output_file}"
+    )
 
 
 if __name__ == "__main__":

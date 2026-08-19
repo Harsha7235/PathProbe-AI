@@ -1,0 +1,4 @@
+environment,actual,adaptive_diagnosis,adaptive_probes,fixed_diagnosis,fixed_probes
+E0,NORMAL,NORMAL,3,NORMAL,4
+E1,RATE_LIMITED,RATE_LIMITED,3,RATE_LIMITED,4
+E2,DELAY,DELAY,2,DELAY,4
