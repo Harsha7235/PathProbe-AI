@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>PathProbe-AI | Network Intelligence Dashboard</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+
+<div class="app">
+
+    <!-- =====================================================
+         SIDEBAR
+    ====================================================== -->
+
+    <aside class="sidebar">
+
+        <div class="brand">
+            <div class="brand-icon">P</div>
+
+            <div>
+                <h1>PATHPROBE-AI</h1>
+                <span>NETWORK INTELLIGENCE</span>
+            </div>
+        </div>
+
+        <nav>
+
+            <a href="#overview" class="nav-item active">
+                <span>◈</span>
+                Overview
+            </a>
+
+            <a href="#investigation" class="nav-item">
+                <span>◎</span>
+                Investigation
+            </a>
+
+            <a href="#signatures" class="nav-item">
+                <span>◉</span>
+                Network Signatures
+            </a>
+
+            <a href="#adaptive" class="nav-item">
+                <span>↗</span>
+                Adaptive Probing
+            </a>
+
+            <a href="#evaluation" class="nav-item">
+                <span>✓</span>
+                Evaluation
+            </a>
+
+        </nav>
+
+        <div class="sidebar-bottom">
+
+            <div class="system-status">
+                <span class="status-dot"></span>
+
+                <div>
+                    <strong>SYSTEM OPERATIONAL</strong>
+                    <small>PathProbe-AI backend online</small>
+                </div>
+            </div>
+
+            <div class="version">
+                PathProbe-AI v1.0
+            </div>
+
+        </div>
+
+    </aside>
+
+
+    <!-- =====================================================
+         MAIN
+    ====================================================== -->
+
+    <main class="main">
+
+        <!-- HEADER -->
+
+        <header class="topbar">
+
+            <div>
+                <div class="eyebrow">
+                    AUTONOMOUS NETWORK DIAGNOSIS
+                </div>
+
+                <h2>
+                    Network Intelligence Center
+                </h2>
+
+                <p>
+                    Black-box network observation, adaptive probing
+                    and grounded AI reasoning.
+                </p>
+            </div>
+
+            <div class="header-right">
+
+                <div class="live-indicator">
+                    <span></span>
+                    LIVE
+                </div>
+
+                <button
+                    class="refresh-btn"
+                    onclick="loadDashboard()">
+                    ↻ Refresh
+                </button>
+
+            </div>
+
+        </header>
+
+
+        <!-- =================================================
+             OVERVIEW
+        ================================================== -->
+
+        <section id="overview">
+
+            <div class="section-heading">
+
+                <div>
+                    <span class="section-label">SYSTEM OVERVIEW</span>
+
+                    <h3>
+                        Current Network Intelligence
+                    </h3>
+                </div>
+
+                <span id="lastUpdated">
+                    Loading...
+                </span>
+
+            </div>
+
+
+            <div class="metric-grid">
+
+                <!-- STATUS -->
+
+                <div class="metric-card">
+
+                    <div class="metric-top">
+                        <span>System Status</span>
+                        <span class="metric-symbol">●</span>
+                    </div>
+
+                    <div class="metric-value operational">
+                        OPERATIONAL
+                    </div>
+
+                    <div class="metric-description">
+                        Autonomous agent available
+                    </div>
+
+                </div>
+
+
+                <!-- DIAGNOSIS -->
+
+                <div class="metric-card diagnosis-card">
+
+                    <div class="metric-top">
+                        <span>Latest Diagnosis</span>
+                        <span class="metric-symbol">◆</span>
+                    </div>
+
+                    <div
+                        id="diagnosis"
+                        class="metric-value">
+                        —
+                    </div>
+
+                    <div
+                        id="diagnosisEnvironment"
+                        class="metric-description">
+                        Environment —
+                    </div>
+
+                </div>
+
+
+                <!-- CONFIDENCE -->
+
+                <div class="metric-card">
+
+                    <div class="metric-top">
+                        <span>Confidence</span>
+                        <span class="metric-symbol">◎</span>
+                    </div>
+
+                    <div
+                        id="confidence"
+                        class="metric-value">
+                        —
+                    </div>
+
+                    <div class="metric-description">
+                        Grounded reasoning confidence
+                    </div>
+
+                </div>
+
+
+                <!-- PROBES -->
+
+                <div class="metric-card">
+
+                    <div class="metric-top">
+                        <span>Probes Used</span>
+                        <span class="metric-symbol">⌁</span>
+                    </div>
+
+                    <div
+                        id="probes"
+                        class="metric-value">
+                        —
+                    </div>
+
+                    <div
+                        id="probeReduction"
+                        class="metric-description">
+                        —
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- =================================================
+             INVESTIGATION
+        ================================================== -->
+
+        <section id="investigation">
+
+            <div class="section-heading">
+
+                <div>
+                    <span class="section-label">
+                        AUTONOMOUS INVESTIGATION
+                    </span>
+
+                    <h3>
+                        Current Diagnostic Decision
+                    </h3>
+                </div>
+
+            </div>
+
+
+            <div class="investigation-grid">
+
+
+                <!-- DIAGNOSIS PANEL -->
+
+                <div class="panel diagnosis-panel">
+
+                    <div class="panel-header">
+
+                        <div>
+                            <span class="panel-label">
+                                FINAL HYPOTHESIS
+                            </span>
+
+                            <h4 id="bigDiagnosis">
+                                —
+                            </h4>
+                        </div>
+
+                        <div
+                            id="confidenceBadge"
+                            class="confidence-badge">
+                            —
+                        </div>
+
+                    </div>
+
+
+                    <div class="diagnosis-line"></div>
+
+
+                    <div class="diagnosis-details">
+
+                        <div>
+                            <span>Environment</span>
+                            <strong id="environment">
+                                —
+                            </strong>
+                        </div>
+
+                        <div>
+                            <span>Probes</span>
+                            <strong id="investigationProbes">
+                                —
+                            </strong>
+                        </div>
+
+                        <div>
+                            <span>Probe Reduction</span>
+                            <strong id="investigationReduction">
+                                —
+                            </strong>
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <!-- REASONING -->
+
+                <div class="panel reasoning-panel">
+
+                    <div class="panel-header">
+
+                        <div>
+                            <span class="panel-label">
+                                AI REASONING
+                            </span>
+
+                            <h4>
+                                Qwen3:8B
+                            </h4>
+                        </div>
+
+                        <span class="ai-badge">
+                            LOCAL LLM
+                        </span>
+
+                    </div>
+
+
+                    <p class="reasoning-text">
+
+                        Qwen3:8B is used as the grounded
+                        reasoning engine. It receives network
+                        measurements and diagnostic rules rather
+                        than the hidden environment label.
+
+                    </p>
+
+
+                    <div class="reasoning-flow">
+
+                        <span>Measurements</span>
+                        <b>→</b>
+                        <span>Evidence</span>
+                        <b>→</b>
+                        <span>Qwen</span>
+                        <b>→</b>
+                        <span>Decision</span>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- =================================================
+             NETWORK SIGNATURES
+        ================================================== -->
+
+        <section id="signatures">
+
+            <div class="section-heading">
+
+                <div>
+
+                    <span class="section-label">
+                        NETWORK BEHAVIOR
+                    </span>
+
+                    <h3>
+                        Network Signatures
+                    </h3>
+
+                </div>
+
+                <div class="signature-legend">
+
+                    <span>
+                        <i class="e0-dot"></i>
+                        E0 NORMAL
+                    </span>
+
+                    <span>
+                        <i class="e1-dot"></i>
+                        E1 RATE LIMITED
+                    </span>
+
+                    <span>
+                        <i class="e2-dot"></i>
+                        E2 DELAY
+                    </span>
+
+                </div>
+
+            </div>
+
+
+            <div class="charts-grid">
+
+
+                <!-- PACKET LOSS -->
+
+                <div class="chart-card">
+
+                    <div class="chart-title">
+
+                        <div>
+                            <span>METRIC 01</span>
+                            <h4>Packet Loss</h4>
+                        </div>
+
+                        <strong>%</strong>
+
+                    </div>
+
+                    <div class="chart-container">
+
+                        <canvas id="lossChart"></canvas>
+
+                    </div>
+
+                </div>
+
+
+                <!-- DELAY -->
+
+                <div class="chart-card">
+
+                    <div class="chart-title">
+
+                        <div>
+                            <span>METRIC 02</span>
+                            <h4>Average Delay</h4>
+                        </div>
+
+                        <strong>ms</strong>
+
+                    </div>
+
+                    <div class="chart-container">
+
+                        <canvas id="delayChart"></canvas>
+
+                    </div>
+
+                </div>
+
+
+                <!-- THROUGHPUT -->
+
+                <div class="chart-card large-chart">
+
+                    <div class="chart-title">
+
+                        <div>
+                            <span>METRIC 03</span>
+                            <h4>Throughput</h4>
+                        </div>
+
+                        <strong>Mbps</strong>
+
+                    </div>
+
+                    <div class="chart-container">
+
+                        <canvas id="throughputChart"></canvas>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- =================================================
+             ADAPTIVE PROBING
+        ================================================== -->
+
+        <section id="adaptive">
+
+            <div class="section-heading">
+
+                <div>
+
+                    <span class="section-label">
+                        AUTONOMOUS PROBING
+                    </span>
+
+                    <h3>
+                        Adaptive vs Fixed Strategy
+                    </h3>
+
+                </div>
+
+            </div>
+
+
+            <div class="adaptive-layout">
+
+
+                <!-- COMPARISON -->
+
+                <div class="panel comparison-panel">
+
+                    <div class="comparison-header">
+
+                        <span>ENVIRONMENT</span>
+                        <span>ACTUAL</span>
+                        <span>ADAPTIVE</span>
+                        <span>FIXED</span>
+
+                    </div>
+
+                    <div id="comparisonRows">
+
+                        <div class="loading">
+                            Loading results...
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <!-- SAVINGS -->
+
+                <div class="panel savings-panel">
+
+                    <span class="panel-label">
+                        MEASUREMENT EFFICIENCY
+                    </span>
+
+                    <div
+                        id="savingValue"
+                        class="saving-value">
+                        —
+                    </div>
+
+                    <p>
+                        reduction in probe usage
+                        compared with fixed probing.
+                    </p>
+
+
+                    <div class="probe-comparison">
+
+                        <div>
+
+                            <span>ADAPTIVE</span>
+
+                            <strong id="adaptiveAvg">
+                                —
+                            </strong>
+
+                            <small>
+                                average probes
+                            </small>
+
+                        </div>
+
+                        <div class="vs">
+                            VS
+                        </div>
+
+                        <div>
+
+                            <span>FIXED</span>
+
+                            <strong id="fixedAvg">
+                                —
+                            </strong>
+
+                            <small>
+                                average probes
+                            </small>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- =================================================
+             EVALUATION
+        ================================================== -->
+
+        <section id="evaluation">
+
+            <div class="section-heading">
+
+                <div>
+
+                    <span class="section-label">
+                        VALIDATION
+                    </span>
+
+                    <h3>
+                        Final Evaluation
+                    </h3>
+
+                </div>
+
+            </div>
+
+
+            <div class="evaluation-grid">
+
+
+                <div class="evaluation-card">
+
+                    <span>
+                        ADAPTIVE ACCURACY
+                    </span>
+
+                    <strong id="adaptiveAccuracy">
+                        —
+                    </strong>
+
+                </div>
+
+
+                <div class="evaluation-card">
+
+                    <span>
+                        ROBUSTNESS
+                    </span>
+
+                    <strong id="robustnessAccuracy">
+                        —
+                    </strong>
+
+                </div>
+
+
+                <div class="evaluation-card">
+
+                    <span>
+                        PERTURBATION
+                    </span>
+
+                    <strong id="perturbationAccuracy">
+                        —
+                    </strong>
+
+                </div>
+
+
+                <div class="evaluation-card">
+
+                    <span>
+                        END-TO-END
+                    </span>
+
+                    <strong id="endToEndAccuracy">
+                        —
+                    </strong>
+
+                </div>
+
+
+                <div class="evaluation-card overall">
+
+                    <span>
+                        OVERALL PROJECT ACCURACY
+                    </span>
+
+                    <strong id="overallAccuracy">
+                        —
+                    </strong>
+
+                </div>
+
+            </div>
+
+
+            <!-- VALIDATION SUMMARY -->
+
+            <div class="validation-summary">
+
+                <div class="validation-item">
+
+                    <div class="check">✓</div>
+
+                    <div>
+
+                        <strong>
+                            3-class diagnosis
+                        </strong>
+
+                        <span>
+                            NORMAL / RATE_LIMITED / DELAY
+                        </span>
+
+                    </div>
+
+                </div>
+
+
+                <div class="validation-item">
+
+                    <div class="check">✓</div>
+
+                    <div>
+
+                        <strong>
+                            Repeated robustness
+                        </strong>
+
+                        <span>
+                            9 / 9 successful runs
+                        </span>
+
+                    </div>
+
+                </div>
+
+
+                <div class="validation-item">
+
+                    <div class="check">✓</div>
+
+                    <div>
+
+                        <strong>
+                            Adaptive efficiency
+                        </strong>
+
+                        <span>
+                            33.33% probe reduction
+                        </span>
+
+                    </div>
+
+                </div>
+
+
+                <div class="validation-item">
+
+                    <div class="check">✓</div>
+
+                    <div>
+
+                        <strong>
+                            Closed-loop diagnosis
+                        </strong>
+
+                        <span>
+                            Probe → Observe → Reason → Decide
+                        </span>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- =================================================
+             FOOTER
+        ================================================== -->
+
+        <footer>
+
+            <div>
+
+                <strong>PATHPROBE-AI</strong>
+
+                <span>
+                    Autonomous Network Diagnosis
+                    & Adaptive Probing
+                </span>
+
+            </div>
+
+            <div>
+                ns-3 • Flask • Qwen3:8B
+            </div>
+
+        </footer>
+
+    </main>
+
+</div>
+
+
+<script
+    src="{{ url_for('static', filename='script.js') }}">
+</script>
+
+</body>
+
+</html>
