@@ -1,0 +1,133 @@
+{
+    "project": "PathProbe-AI",
+    "test": "robustness_test",
+    "generated_at": "2026-08-19T05:30:08.423302",
+    "runs_per_environment": 3,
+    "total_runs": 9,
+    "passed_runs": 9,
+    "failed_runs": 0,
+    "robustness_accuracy_percent": 100.0,
+    "average_confidence": 0.956,
+    "average_probes": 2.67,
+    "environment_results": {
+        "E0": {
+            "name": "NORMAL",
+            "runs": 3,
+            "passed": 3,
+            "failed": 0,
+            "accuracy_percent": 100.0,
+            "average_confidence": 0.95,
+            "average_probes": 3.0
+        },
+        "E1": {
+            "name": "RATE_LIMITED",
+            "runs": 3,
+            "passed": 3,
+            "failed": 0,
+            "accuracy_percent": 100.0,
+            "average_confidence": 0.95,
+            "average_probes": 3.0
+        },
+        "E2": {
+            "name": "DELAY",
+            "runs": 3,
+            "passed": 3,
+            "failed": 0,
+            "accuracy_percent": 100.0,
+            "average_confidence": 0.967,
+            "average_probes": 2.0
+        }
+    },
+    "raw_results": [
+        {
+            "timestamp": "2026-08-19T05:27:07.256964",
+            "environment": "E0",
+            "actual": "NORMAL",
+            "run": 1,
+            "diagnosis": "NORMAL",
+            "confidence": 0.95,
+            "probes_used": 3,
+            "result": "PASS"
+        },
+        {
+            "timestamp": "2026-08-19T05:27:32.022575",
+            "environment": "E0",
+            "actual": "NORMAL",
+            "run": 2,
+            "diagnosis": "NORMAL",
+            "confidence": 0.95,
+            "probes_used": 3,
+            "result": "PASS"
+        },
+        {
+            "timestamp": "2026-08-19T05:27:56.387177",
+            "environment": "E0",
+            "actual": "NORMAL",
+            "run": 3,
+            "diagnosis": "NORMAL",
+            "confidence": 0.95,
+            "probes_used": 3,
+            "result": "PASS"
+        },
+        {
+            "timestamp": "2026-08-19T05:28:20.877996",
+            "environment": "E1",
+            "actual": "RATE_LIMITED",
+            "run": 1,
+            "diagnosis": "RATE_LIMITED",
+            "confidence": 0.95,
+            "probes_used": 3,
+            "result": "PASS"
+        },
+        {
+            "timestamp": "2026-08-19T05:28:49.417354",
+            "environment": "E1",
+            "actual": "RATE_LIMITED",
+            "run": 2,
+            "diagnosis": "RATE_LIMITED",
+            "confidence": 0.95,
+            "probes_used": 3,
+            "result": "PASS"
+        },
+        {
+            "timestamp": "2026-08-19T05:29:13.742825",
+            "environment": "E1",
+            "actual": "RATE_LIMITED",
+            "run": 3,
+            "diagnosis": "RATE_LIMITED",
+            "confidence": 0.95,
+            "probes_used": 3,
+            "result": "PASS"
+        },
+        {
+            "timestamp": "2026-08-19T05:29:31.755495",
+            "environment": "E2",
+            "actual": "DELAY",
+            "run": 1,
+            "diagnosis": "DELAY",
+            "confidence": 0.95,
+            "probes_used": 2,
+            "result": "PASS"
+        },
+        {
+            "timestamp": "2026-08-19T05:29:50.159972",
+            "environment": "E2",
+            "actual": "DELAY",
+            "run": 2,
+            "diagnosis": "DELAY",
+            "confidence": 1.0,
+            "probes_used": 2,
+            "result": "PASS"
+        },
+        {
+            "timestamp": "2026-08-19T05:30:08.415917",
+            "environment": "E2",
+            "actual": "DELAY",
+            "run": 3,
+            "diagnosis": "DELAY",
+            "confidence": 0.95,
+            "probes_used": 2,
+            "result": "PASS"
+        }
+    ]
+}
