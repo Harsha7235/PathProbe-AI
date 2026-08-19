@@ -1,0 +1,146 @@
+{
+    "project": "PathProbe-AI",
+    "benchmark": "final_multi_run_benchmark",
+    "generated_at": "2026-08-19T05:23:40.797311",
+    "runs_per_environment": 3,
+    "total_runs": 9,
+    "correct_runs": 9,
+    "overall_accuracy_percent": 100.0,
+    "average_adaptive_probes": 2.67,
+    "fixed_probes": 4,
+    "average_probe_reduction_percent": 33.33,
+    "average_confidence": 0.956,
+    "environment_results": {
+        "E0": {
+            "name": "NORMAL",
+            "runs": 3,
+            "accuracy_percent": 100.0,
+            "average_probes": 3.0,
+            "average_confidence": 0.967
+        },
+        "E1": {
+            "name": "RATE_LIMITED",
+            "runs": 3,
+            "accuracy_percent": 100.0,
+            "average_probes": 3.0,
+            "average_confidence": 0.95
+        },
+        "E2": {
+            "name": "DELAY",
+            "runs": 3,
+            "accuracy_percent": 100.0,
+            "average_probes": 2.0,
+            "average_confidence": 0.95
+        }
+    },
+    "raw_results": [
+        {
+            "timestamp": "2026-08-19T05:20:36.941210",
+            "environment": "E0",
+            "actual": "NORMAL",
+            "run": 1,
+            "diagnosis": "NORMAL",
+            "confidence": 0.95,
+            "probes_used": 3,
+            "fixed_probes": 4,
+            "probe_reduction_percent": 25.0,
+            "correct": true
+        },
+        {
+            "timestamp": "2026-08-19T05:21:04.790120",
+            "environment": "E0",
+            "actual": "NORMAL",
+            "run": 2,
+            "diagnosis": "NORMAL",
+            "confidence": 1.0,
+            "probes_used": 3,
+            "fixed_probes": 4,
+            "probe_reduction_percent": 25.0,
+            "correct": true
+        },
+        {
+            "timestamp": "2026-08-19T05:21:30.192153",
+            "environment": "E0",
+            "actual": "NORMAL",
+            "run": 3,
+            "diagnosis": "NORMAL",
+            "confidence": 0.95,
+            "probes_used": 3,
+            "fixed_probes": 4,
+            "probe_reduction_percent": 25.0,
+            "correct": true
+        },
+        {
+            "timestamp": "2026-08-19T05:21:58.860380",
+            "environment": "E1",
+            "actual": "RATE_LIMITED",
+            "run": 1,
+            "diagnosis": "RATE_LIMITED",
+            "confidence": 0.95,
+            "probes_used": 3,
+            "fixed_probes": 4,
+            "probe_reduction_percent": 25.0,
+            "correct": true
+        },
+        {
+            "timestamp": "2026-08-19T05:22:25.842537",
+            "environment": "E1",
+            "actual": "RATE_LIMITED",
+            "run": 2,
+            "diagnosis": "RATE_LIMITED",
+            "confidence": 0.95,
+            "probes_used": 3,
+            "fixed_probes": 4,
+            "probe_reduction_percent": 25.0,
+            "correct": true
+        },
+        {
+            "timestamp": "2026-08-19T05:22:49.883364",
+            "environment": "E1",
+            "actual": "RATE_LIMITED",
+            "run": 3,
+            "diagnosis": "RATE_LIMITED",
+            "confidence": 0.95,
+            "probes_used": 3,
+            "fixed_probes": 4,
+            "probe_reduction_percent": 25.0,
+            "correct": true
+        },
+        {
+            "timestamp": "2026-08-19T05:23:06.840947",
+            "environment": "E2",
+            "actual": "DELAY",
+            "run": 1,
+            "diagnosis": "DELAY",
+            "confidence": 0.95,
+            "probes_used": 2,
+            "fixed_probes": 4,
+            "probe_reduction_percent": 50.0,
+            "correct": true
+        },
+        {
+            "timestamp": "2026-08-19T05:23:23.601735",
+            "environment": "E2",
+            "actual": "DELAY",
+            "run": 2,
+            "diagnosis": "DELAY",
+            "confidence": 0.95,
+            "probes_used": 2,
+            "fixed_probes": 4,
+            "probe_reduction_percent": 50.0,
+            "correct": true
+        },
+        {
+            "timestamp": "2026-08-19T05:23:40.790271",
+            "environment": "E2",
+            "actual": "DELAY",
+            "run": 3,
+            "diagnosis": "DELAY",
+            "confidence": 0.95,
+            "probes_used": 2,
+            "fixed_probes": 4,
+            "probe_reduction_percent": 50.0,
+            "correct": true
+        }
+    ]
+}
