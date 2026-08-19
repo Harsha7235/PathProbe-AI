@@ -1,0 +1,4 @@
+timestamp,environment,actual,diagnosis,confidence,probes_used,correct
+2026-08-19T05:35:16.258771,E0,NORMAL,NORMAL,0.95,3,True
+2026-08-19T05:35:16.258771,E1,RATE_LIMITED,RATE_LIMITED,0.95,3,True
+2026-08-19T05:35:16.258771,E2,DELAY,DELAY,0.95,2,True

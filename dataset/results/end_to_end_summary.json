@@ -1,0 +1,37 @@
+{
+    "project": "PathProbe-AI",
+    "experiment": "end_to_end_evaluation",
+    "generated_at": "2026-08-19T05:35:16.254728",
+    "total_environments": 3,
+    "passed": 3,
+    "failed": 0,
+    "accuracy_percent": 100.0,
+    "average_confidence": 0.95,
+    "average_probes": 2.67,
+    "results": [
+        {
+            "environment": "E0",
+            "actual": "NORMAL",
+            "diagnosis": "NORMAL",
+            "confidence": 0.95,
+            "probes_used": 3,
+            "correct": true
+        },
+        {
+            "environment": "E1",
+            "actual": "RATE_LIMITED",
+            "diagnosis": "RATE_LIMITED",
+            "confidence": 0.95,
+            "probes_used": 3,
+            "correct": true
+        },
+        {
+            "environment": "E2",
+            "actual": "DELAY",
+            "diagnosis": "DELAY",
+            "confidence": 0.95,
+            "probes_used": 2,
+            "correct": true
+        }
+    ]
+}
