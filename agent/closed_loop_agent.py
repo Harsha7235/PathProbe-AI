@@ -3,10 +3,6 @@ import subprocess
 from pathlib import Path
 
 
-# ============================================================
-# PATHS
-# ============================================================
-
 NS3_DIR = Path("/home/harsha/ns-3.48")
 
 E0_EXECUTABLE = (
@@ -23,10 +19,13 @@ E1_EXECUTABLE = (
     / "ns3.48-pathprobe_rate_limited-default"
 )
 
+E2_EXECUTABLE = (
+    NS3_DIR
+    / "build"
+    / "scratch"
+    / "ns3.48-pathprobe_delay_jitter-default"
+)
 
-# ============================================================
-# ADAPTIVE AGENT
-# ============================================================
 
 class PathProbeAgent:
 
@@ -35,10 +34,13 @@ class PathProbeAgent:
         self.observations = []
 
         self.hypotheses = {
-            "NORMAL": 0.50,
-            "RATE_LIMITED": 0.50
+            "NORMAL": 0.34,
+            "RATE_LIMITED": 0.33,
+            "DELAY": 0.33
         }
 
+        # Probes ordered from cheap/low stress
+        # to increasingly discriminative probes.
         self.probe_sequence = [
             50,
             100,
@@ -46,22 +48,24 @@ class PathProbeAgent:
             500
         ]
 
-    # --------------------------------------------------------
+    # ========================================================
     # RUN NS-3
-    # --------------------------------------------------------
+    # ========================================================
 
     def run_ns3(self, environment, rate):
 
-        if environment == "E0":
-            executable = E0_EXECUTABLE
+        executables = {
+            "E0": E0_EXECUTABLE,
+            "E1": E1_EXECUTABLE,
+            "E2": E2_EXECUTABLE
+        }
 
-        elif environment == "E1":
-            executable = E1_EXECUTABLE
-
-        else:
+        if environment not in executables:
             raise ValueError(
                 f"Unknown environment: {environment}"
             )
+
+        executable = executables[environment]
 
         command = [
             str(executable),
@@ -77,9 +81,7 @@ class PathProbeAgent:
         print("----------------------------------------")
         print("RUNNING PROBE")
         print("----------------------------------------")
-        print(
-            f"Environment : {environment}"
-        )
+
         print(
             f"Probe rate  : {rate} packets/sec"
         )
@@ -105,9 +107,9 @@ class PathProbeAgent:
 
         return result.stdout
 
-    # --------------------------------------------------------
-    # PARSE NS-3 OUTPUT
-    # --------------------------------------------------------
+    # ========================================================
+    # PARSE NS-3
+    # ========================================================
 
     def parse_output(self, output):
 
@@ -121,7 +123,7 @@ class PathProbeAgent:
             if not match:
 
                 raise ValueError(
-                    f"Could not find: {pattern}"
+                    f"Could not extract: {pattern}"
                 )
 
             return float(
@@ -129,30 +131,31 @@ class PathProbeAgent:
             )
 
         return {
-            "packet_loss":
-                extract(
-                    r"Packet Loss\s*:\s*([\d.]+)"
-                ),
+            "packet_loss": extract(
+                r"Packet Loss\s*:\s*([\d.]+)"
+            ),
 
-            "throughput":
-                extract(
-                    r"Throughput\s*:\s*([\d.]+)"
-                ),
+            "throughput": extract(
+                r"Throughput\s*:\s*([\d.]+)"
+            ),
 
-            "delay":
-                extract(
-                    r"Average Delay\s*:\s*([\d.]+)"
-                )
+            "delay": extract(
+                r"Average Delay\s*:\s*([\d.]+)"
+            )
         }
 
-    # --------------------------------------------------------
-    # UPDATE BELIEFS
-    # --------------------------------------------------------
+    # ========================================================
+    # UPDATE HYPOTHESES
+    # ========================================================
 
     def update_beliefs(self, observation):
 
         loss = observation["packet_loss"]
         delay = observation["delay"]
+
+        # ----------------------------------------------------
+        # RATE-LIMITED SIGNATURE
+        # ----------------------------------------------------
 
         if loss >= 20 and delay >= 100:
 
@@ -162,29 +165,71 @@ class PathProbeAgent:
 
             self.hypotheses[
                 "NORMAL"
-            ] -= 0.25
+            ] -= 0.20
+
+            self.hypotheses[
+                "DELAY"
+            ] -= 0.20
+
+        # ----------------------------------------------------
+        # DELAY SIGNATURE
+        # ----------------------------------------------------
+
+        elif delay >= 70 and loss < 5:
+
+            self.hypotheses[
+                "DELAY"
+            ] += 0.45
+
+            self.hypotheses[
+                "NORMAL"
+            ] -= 0.20
+
+            self.hypotheses[
+                "RATE_LIMITED"
+            ] -= 0.20
+
+        # ----------------------------------------------------
+        # MODERATE ABNORMALITY
+        # ----------------------------------------------------
 
         elif loss > 0 or delay > 50:
 
             self.hypotheses[
                 "RATE_LIMITED"
-            ] += 0.20
+            ] += 0.10
+
+            self.hypotheses[
+                "DELAY"
+            ] += 0.15
 
             self.hypotheses[
                 "NORMAL"
-            ] -= 0.10
+            ] -= 0.15
+
+        # ----------------------------------------------------
+        # NORMAL
+        # ----------------------------------------------------
 
         else:
 
             self.hypotheses[
                 "NORMAL"
-            ] += 0.10
+            ] += 0.15
+
+            self.hypotheses[
+                "RATE_LIMITED"
+            ] -= 0.07
+
+            self.hypotheses[
+                "DELAY"
+            ] -= 0.07
 
         self.normalize()
 
-    # --------------------------------------------------------
+    # ========================================================
     # NORMALIZE
-    # --------------------------------------------------------
+    # ========================================================
 
     def normalize(self):
 
@@ -201,10 +246,8 @@ class PathProbeAgent:
 
         if total == 0:
 
-            self.hypotheses = {
-                "NORMAL": 0.5,
-                "RATE_LIMITED": 0.5
-            }
+            for key in self.hypotheses:
+                self.hypotheses[key] = 1 / 3
 
             return
 
@@ -212,9 +255,9 @@ class PathProbeAgent:
 
             self.hypotheses[key] /= total
 
-    # --------------------------------------------------------
+    # ========================================================
     # SELECT NEXT PROBE
-    # --------------------------------------------------------
+    # ========================================================
 
     def choose_next_probe(self):
 
@@ -222,14 +265,14 @@ class PathProbeAgent:
             self.hypotheses.values()
         )
 
-        # Stop when sufficiently confident.
+        # Stop if sufficiently confident.
         if confidence >= 0.90:
 
             return None
 
         tested = {
-            obs["rate"]
-            for obs in self.observations
+            observation["rate"]
+            for observation in self.observations
         }
 
         for rate in self.probe_sequence:
@@ -240,9 +283,9 @@ class PathProbeAgent:
 
         return None
 
-    # --------------------------------------------------------
+    # ========================================================
     # STATUS
-    # --------------------------------------------------------
+    # ========================================================
 
     def print_status(self):
 
@@ -260,44 +303,46 @@ class PathProbeAgent:
         print("       AGENT BELIEF STATE")
         print("========================================")
 
+        for hypothesis, probability in (
+            self.hypotheses.items()
+        ):
+
+            print(
+                f"{hypothesis:14}: "
+                f"{probability:.3f}"
+            )
+
         print(
-            f"NORMAL       : "
-            f"{self.hypotheses['NORMAL']:.3f}"
+            f"Diagnosis      : {diagnosis}"
         )
 
         print(
-            f"RATE_LIMITED : "
-            f"{self.hypotheses['RATE_LIMITED']:.3f}"
+            f"Confidence     : {confidence:.3f}"
         )
 
         print(
-            f"Diagnosis    : {diagnosis}"
-        )
-
-        print(
-            f"Confidence   : {confidence:.3f}"
-        )
-
-        print(
-            f"Probes used  : "
+            f"Probes used    : "
             f"{len(self.observations)}"
         )
 
         print("========================================")
 
-    # --------------------------------------------------------
+    # ========================================================
     # CLOSED LOOP
-    # --------------------------------------------------------
+    # ========================================================
 
     def investigate(self, environment):
 
         print()
         print("========================================")
         print("       PATHPROBE-AI CLOSED LOOP")
+        print("       3-CLASS ENVIRONMENT TEST")
         print("========================================")
+
         print()
         print(
-            "Environment is hidden from the agent."
+            "Hidden environment:"
+            f" {environment}"
         )
 
         while True:
@@ -343,11 +388,11 @@ class PathProbeAgent:
         print("========================================")
 
         print(
-            f"Diagnosis  : {diagnosis}"
+            f"Diagnosis   : {diagnosis}"
         )
 
         print(
-            f"Confidence : {confidence:.3f}"
+            f"Confidence  : {confidence:.3f}"
         )
 
         print(
@@ -355,30 +400,24 @@ class PathProbeAgent:
             f"{len(self.observations)}"
         )
 
-        print(
-            "========================================"
-        )
+        print("========================================")
 
-
-# ============================================================
-# MAIN
-# ============================================================
 
 def main():
 
-    # --------------------------------------------------------
-    # IMPORTANT:
+    # ========================================================
+    # GROUND TRUTH
     #
-    # Change ONLY this value when testing.
+    # Change this ONLY for evaluation:
     #
-    # E0 = normal
-    # E1 = rate limited
+    # E0 = NORMAL
+    # E1 = RATE_LIMITED
+    # E2 = DELAY
     #
-    # The agent itself does not use this value to diagnose.
-    # It is only the hidden ground truth used by the experiment.
-    # --------------------------------------------------------
+    # The agent does NOT receive this value as evidence.
+    # ========================================================
 
-    hidden_environment = "E1"
+    hidden_environment = "E0"
 
     agent = PathProbeAgent()
 
