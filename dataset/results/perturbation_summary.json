@@ -1,0 +1,36 @@
+{
+    "project": "PathProbe-AI",
+    "test": "measurement_perturbation",
+    "generated_at": "2026-08-19T05:31:58.100271",
+    "random_seed": 42,
+    "loss_noise_percent": 5.0,
+    "delay_noise_percent": 5.0,
+    "throughput_noise_percent": 5.0,
+    "total_environments": 3,
+    "passed": 3,
+    "failed": 0,
+    "accuracy_percent": 100.0,
+    "results": [
+        {
+            "timestamp": "2026-08-19T05:31:58.100149",
+            "environment": "E1",
+            "actual": "RATE_LIMITED",
+            "diagnosis": "RATE_LIMITED",
+            "result": "PASS"
+        },
+        {
+            "timestamp": "2026-08-19T05:31:58.100240",
+            "environment": "E0",
+            "actual": "NORMAL",
+            "diagnosis": "NORMAL",
+            "result": "PASS"
+        },
+        {
+            "timestamp": "2026-08-19T05:31:58.100266",
+            "environment": "E2",
+            "actual": "DELAY",
+            "diagnosis": "DELAY",
+            "result": "PASS"
+        }
+    ]
+}
