@@ -1,0 +1,28 @@
+{
+    "project": "PathProbe-AI",
+    "evaluation_type": "final_project_evaluation",
+    "generated_at": "2026-08-19T05:48:58.478114",
+    "adaptive_vs_fixed": {
+        "adaptive_accuracy_percent": 100.0,
+        "fixed_accuracy_percent": 100.0,
+        "adaptive_average_probes": 2.67,
+        "fixed_average_probes": 4.0,
+        "probe_reduction_percent": 33.33
+    },
+    "robustness": {
+        "total_runs": 9,
+        "passed_runs": 9,
+        "accuracy_percent": 100.0
+    },
+    "perturbation": {
+        "total_tests": 3,
+        "passed_tests": 3,
+        "accuracy_percent": 100.0
+    },
+    "end_to_end": {
+        "total_tests": 3,
+        "passed_tests": 3,
+        "accuracy_percent": 100.0
+    },
+    "overall_accuracy_percent": 100.0
+}
