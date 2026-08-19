@@ -1,0 +1,2 @@
+timestamp,environment,diagnosis,confidence,probes_used,probe_reduction_percent
+2026-08-19T05:12:56.985692,E1,RATE_LIMITED,0.95,3,25.0
