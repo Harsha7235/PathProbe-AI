@@ -5,6 +5,16 @@ import urllib.request
 import urllib.error
 from pathlib import Path
 
+import sys
+from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from reports.investigation_report import generate_report
+
 
 # ============================================================
 # PATHPROBE-AI
@@ -17,17 +27,24 @@ NS3_DIR = Path("/home/harsha/ns-3.48")
 OLLAMA_URL = "http://172.20.192.1:11434/api/generate"
 MODEL = "qwen3:8b"
 
-# Tested ns-3 environments
+
+# ============================================================
+# TESTED ns-3 ENVIRONMENTS
+# ============================================================
+
 PROBES = {
     "E0": NS3_DIR / "build/scratch/ns3.48-pathprobe_rate-default",
     "E1": NS3_DIR / "build/scratch/ns3.48-pathprobe_rate_limited-default",
     "E2": NS3_DIR / "build/scratch/ns3.48-pathprobe_delay_jitter-default",
 }
 
-# Agent's available probing actions
+
+# ============================================================
+# AGENT PROBE CONFIGURATION
+# ============================================================
+
 PROBE_RATES = [50, 100, 200, 500]
 
-# Maximum number of measurements per investigation
 MAX_PROBES = 4
 
 
@@ -52,7 +69,7 @@ def calculate_evidence(observations):
     signals = []
 
     # --------------------------------------------------------
-    # Current measurement
+    # CURRENT MEASUREMENT
     # --------------------------------------------------------
 
     if loss == 0:
@@ -68,17 +85,19 @@ def calculate_evidence(observations):
         signals.append(
             f"Low delay detected: {delay:.1f} ms."
         )
+
     elif delay >= 100:
         signals.append(
             f"High delay detected: {delay:.1f} ms."
         )
+
     else:
         signals.append(
             f"Moderate delay detected: {delay:.1f} ms."
         )
 
     # --------------------------------------------------------
-    # Compare consecutive measurements
+    # COMPARE CONSECUTIVE MEASUREMENTS
     # --------------------------------------------------------
 
     if len(observations) >= 2:
@@ -92,26 +111,33 @@ def calculate_evidence(observations):
         delay_change = delay - previous_delay
 
         if loss_change > 5:
+
             signals.append(
                 f"Packet loss increased by "
                 f"{loss_change:.2f} percentage points."
             )
 
         if delay_change > 50:
+
             signals.append(
                 f"Delay increased sharply by "
                 f"{delay_change:.1f} ms."
             )
 
     # --------------------------------------------------------
-    # Detect persistent high delay
+    # DETECT PERSISTENT HIGH DELAY
     # --------------------------------------------------------
 
     high_delay_zero_loss = [
+
         obs
         for obs in observations
-        if obs["average_delay_ms"] >= 100
-        and obs["packet_loss_percent"] == 0
+
+        if (
+            obs["average_delay_ms"] >= 100
+            and
+            obs["packet_loss_percent"] == 0
+        )
     ]
 
     persistent_delay = False
@@ -119,6 +145,7 @@ def calculate_evidence(observations):
     if len(high_delay_zero_loss) >= 2:
 
         delays = [
+
             obs["average_delay_ms"]
             for obs in high_delay_zero_loss
         ]
@@ -134,7 +161,7 @@ def calculate_evidence(observations):
             )
 
     # --------------------------------------------------------
-    # Detect rate-limit / congestion signature
+    # DETECT RATE-LIMIT / CONGESTION SIGNATURE
     # --------------------------------------------------------
 
     congestion_signature = False
@@ -158,7 +185,7 @@ def calculate_evidence(observations):
             break
 
     # --------------------------------------------------------
-    # Classification
+    # CLASSIFICATION
     # --------------------------------------------------------
 
     if congestion_signature:
@@ -186,9 +213,15 @@ def calculate_evidence(observations):
         classification = "UNCERTAIN"
 
     return {
-        "classification": classification,
-        "signals": signals,
-        "recommendation": classification
+
+        "classification":
+            classification,
+
+        "signals":
+            signals,
+
+        "recommendation":
+            classification
     }
 
 
@@ -201,10 +234,11 @@ class AutonomousPathProbe:
     def __init__(self):
 
         self.observations = []
+
         self.history = []
 
     # ========================================================
-    # RUN NS-3
+    # RUN ns-3
     # ========================================================
 
     def run_ns3(self, environment, rate):
@@ -214,17 +248,21 @@ class AutonomousPathProbe:
         if not executable.exists():
 
             raise FileNotFoundError(
+
                 f"\nns-3 executable not found:\n"
                 f"{executable}\n"
             )
 
         command = [
+
             str(executable),
+
             f"--packetsPerSecond={rate}"
         ]
 
-        # E1 contains the hidden 1 Mbps bottleneck.
-        # This label is NEVER sent to Qwen.
+        # E1 has the hidden 1 Mbps bottleneck.
+        # This information is NOT sent to Qwen.
+
         if environment == "E1":
 
             command.append(
@@ -232,17 +270,24 @@ class AutonomousPathProbe:
             )
 
         result = subprocess.run(
+
             command,
+
             cwd=NS3_DIR,
+
             capture_output=True,
+
             text=True,
+
             encoding="utf-8",
+
             errors="replace"
         )
 
         if result.returncode != 0:
 
             print(result.stdout)
+
             print(result.stderr)
 
             raise RuntimeError(
@@ -250,6 +295,10 @@ class AutonomousPathProbe:
             )
 
         output = result.stdout
+
+        # ----------------------------------------------------
+        # PARSE ns-3 OUTPUT
+        # ----------------------------------------------------
 
         loss_match = re.search(
             r"Packet Loss\s*:\s*([\d.]+)",
@@ -277,20 +326,27 @@ class AutonomousPathProbe:
         )
 
         if not all([
+
             loss_match,
+
             delay_match,
+
             throughput_match,
+
             sent_match,
+
             received_match
+
         ]):
 
             raise RuntimeError(
                 "Could not parse ns-3 output."
             )
 
-        # IMPORTANT:
-        # Do NOT put environment/E0/E1/E2 here.
-        # Qwen must only receive black-box measurements.
+        # ----------------------------------------------------
+        # BLACK-BOX OBSERVATION
+        # ----------------------------------------------------
+
         observation = {
 
             "probe_rate_pps":
@@ -325,12 +381,16 @@ class AutonomousPathProbe:
         )
 
         measurements = json.dumps(
+
             self.observations,
+
             indent=2
         )
 
         derived_evidence = json.dumps(
+
             evidence,
+
             indent=2
         )
 
@@ -366,7 +426,7 @@ but increasing offered traffic causes:
 - packet loss
 - severe queueing delay
 - throughput saturation
-- or a sudden degradation
+- or sudden degradation
 
 A low-rate observation alone is NOT sufficient
 to rule out RATE_LIMITED.
@@ -393,7 +453,7 @@ IMPORTANT AGENT RULES
 
 5. NORMAL should only be confirmed after
    a higher-load probe of at least 200 pps
-   still shows low delay and zero loss.
+   still shows low delay and zero packet loss.
 
 6. If packet loss and severe delay appear
    when offered load increases, strongly
@@ -460,13 +520,17 @@ Required format:
 
         payload = {
 
-            "model": MODEL,
+            "model":
+                MODEL,
 
-            "prompt": prompt,
+            "prompt":
+                prompt,
 
-            "stream": False,
+            "stream":
+                False,
 
-            "format": "json"
+            "format":
+                "json"
         }
 
         data = json.dumps(
@@ -490,8 +554,11 @@ Required format:
         try:
 
             with urllib.request.urlopen(
+
                 request,
+
                 timeout=180
+
             ) as response:
 
                 result = json.loads(
@@ -501,6 +568,7 @@ Required format:
         except urllib.error.URLError as error:
 
             raise RuntimeError(
+
                 "\nCould not connect to Ollama.\n"
                 "Make sure Windows Ollama is running.\n\n"
                 f"Original error: {error}\n"
@@ -526,10 +594,22 @@ Required format:
         except json.JSONDecodeError:
 
             print()
-            print("RAW QWEN RESPONSE")
-            print("----------------------------------------")
-            print(response_text)
-            print("----------------------------------------")
+
+            print(
+                "RAW QWEN RESPONSE"
+            )
+
+            print(
+                "----------------------------------------"
+            )
+
+            print(
+                response_text
+            )
+
+            print(
+                "----------------------------------------"
+            )
 
             raise RuntimeError(
                 "Qwen did not return valid JSON."
@@ -552,7 +632,9 @@ Required format:
         ]
 
         used_rates = {
+
             obs["probe_rate_pps"]
+
             for obs in self.observations
         }
 
@@ -570,16 +652,19 @@ Required format:
                 "RATE_LIMITED"
 
             decision["confidence"] = max(
+
                 float(
                     decision.get(
                         "confidence",
                         0.0
                     )
                 ),
+
                 0.90
             )
 
             decision["reasoning"] = (
+
                 "Increasing offered load produced "
                 "packet loss together with severe "
                 "delay, indicating a congestion or "
@@ -600,16 +685,19 @@ Required format:
                 "DELAY"
 
             decision["confidence"] = max(
+
                 float(
                     decision.get(
                         "confidence",
                         0.0
                     )
                 ),
+
                 0.90
             )
 
             decision["reasoning"] = (
+
                 "Persistent high delay of approximately "
                 "100 ms or greater is observed across "
                 "multiple probes while packet loss "
@@ -630,16 +718,19 @@ Required format:
                 "NORMAL"
 
             decision["confidence"] = max(
+
                 float(
                     decision.get(
                         "confidence",
                         0.0
                     )
                 ),
+
                 0.90
             )
 
             decision["reasoning"] = (
+
                 "Multiple probes including a higher-load "
                 "probe show low delay below 50 ms and "
                 "zero packet loss. No congestion or "
@@ -656,15 +747,20 @@ Required format:
 
         decision["stop"] = False
 
-        # Agent must explore higher load rather than
-        # repeatedly probing the same rate.
-
         higher_rates = sorted(
+
             [
+
                 rate
+
                 for rate in PROBE_RATES
-                if rate > latest_rate
-                and rate not in used_rates
+
+                if (
+                    rate > latest_rate
+                    and
+                    rate not in used_rates
+                )
+
             ]
         )
 
@@ -677,8 +773,11 @@ Required format:
         else:
 
             remaining_rates = [
+
                 rate
+
                 for rate in PROBE_RATES
+
                 if rate not in used_rates
             ]
 
@@ -701,9 +800,13 @@ Required format:
     # ========================================================
 
     def print_state(
+
         self,
+
         step,
+
         observation,
+
         decision
     ):
 
@@ -712,28 +815,39 @@ Required format:
         )
 
         print()
-        print("========================================")
+
+        print(
+            "========================================"
+        )
+
         print(
             f"       PATHPROBE-AI AGENT STEP {step}"
         )
-        print("========================================")
 
         print(
+            "========================================"
+        )
+
+        print(
+
             f"Probe Rate       : "
             f"{observation['probe_rate_pps']} pps"
         )
 
         print(
+
             f"Packet Loss      : "
             f"{observation['packet_loss_percent']} %"
         )
 
         print(
+
             f"Average Delay    : "
             f"{observation['average_delay_ms']} ms"
         )
 
         print(
+
             f"Throughput       : "
             f"{observation['throughput_mbps']} Mbps"
         )
@@ -741,6 +855,7 @@ Required format:
         print()
 
         print(
+
             f"Evidence Engine  : "
             f"{evidence['classification']}"
         )
@@ -748,16 +863,19 @@ Required format:
         print()
 
         print(
+
             f"Qwen Hypothesis  : "
             f"{decision.get('hypothesis')}"
         )
 
         print(
+
             f"Confidence       : "
             f"{decision.get('confidence')}"
         )
 
         print(
+
             f"Reasoning        : "
             f"{decision.get('reasoning')}"
         )
@@ -767,8 +885,11 @@ Required format:
         print("Evidence:")
 
         for item in decision.get(
+
             "evidence",
+
             []
+
         ):
 
             print(
@@ -778,11 +899,13 @@ Required format:
         print()
 
         print(
+
             f"Next Probe       : "
             f"{decision.get('next_probe_rate_pps')} pps"
         )
 
         print(
+
             f"Stop             : "
             f"{decision.get('stop')}"
         )
@@ -792,25 +915,105 @@ Required format:
         )
 
     # ========================================================
+    # GENERATE INVESTIGATION REPORT
+    # ========================================================
+
+    def generate_investigation_report(
+        self,
+        environment,
+        decision
+    ):
+
+        try:
+
+            report_result = generate_report(
+
+                environment,
+
+                self.history,
+
+                decision
+            )
+
+            print()
+
+            print(
+                "========================================"
+            )
+
+            print(
+                "       INVESTIGATION REPORT"
+            )
+
+            print(
+                "========================================"
+            )
+
+            if report_result is not None:
+
+                print(
+                    f"Report generated: "
+                    f"{report_result}"
+                )
+
+            else:
+
+                print(
+                    "Investigation report generated."
+                )
+
+            print(
+                "========================================"
+            )
+
+        except Exception as error:
+
+            print()
+
+            print(
+                "WARNING: Could not generate "
+                "investigation report."
+            )
+
+            print(
+                f"Report error: {error}"
+            )
+
+    # ========================================================
     # AUTONOMOUS INVESTIGATION LOOP
     # ========================================================
 
     def investigate(self, environment):
 
         print()
-        print("========================================")
-        print("     PATHPROBE-AI")
-        print("     HYBRID AUTONOMOUS AGENT")
-        print("========================================")
 
-        # This is visible only to the test harness.
-        # It is NEVER included in the Qwen prompt.
         print(
+            "========================================"
+        )
+
+        print(
+            "     PATHPROBE-AI"
+        )
+
+        print(
+            "     HYBRID AUTONOMOUS AGENT"
+        )
+
+        print(
+            "========================================"
+        )
+
+        # Visible only to the test harness.
+        # Never included in the Qwen prompt.
+
+        print(
+
             f"Testing simulation environment: "
             f"{environment}"
         )
 
         print(
+
             "The environment label is NOT provided "
             "to Qwen."
         )
@@ -824,23 +1027,30 @@ Required format:
         used_rates = set()
 
         for step in range(
+
             1,
+
             MAX_PROBES + 1
+
         ):
 
             # ------------------------------------------------
-            # Prevent duplicate probes
+            # PREVENT DUPLICATE PROBES
             # ------------------------------------------------
 
             if rate in used_rates:
 
                 unused = [
+
                     r
+
                     for r in PROBE_RATES
+
                     if r not in used_rates
                 ]
 
                 if not unused:
+
                     break
 
                 rate = unused[0]
@@ -848,11 +1058,13 @@ Required format:
             used_rates.add(rate)
 
             # ------------------------------------------------
-            # REAL NS-3 MEASUREMENT
+            # REAL ns-3 MEASUREMENT
             # ------------------------------------------------
 
             observation = self.run_ns3(
+
                 environment,
+
                 rate
             )
 
@@ -874,6 +1086,10 @@ Required format:
                 decision
             )
 
+            # ------------------------------------------------
+            # SAVE HISTORY
+            # ------------------------------------------------
+
             self.history.append({
 
                 "observation":
@@ -883,9 +1099,16 @@ Required format:
                     decision
             })
 
+            # ------------------------------------------------
+            # DISPLAY
+            # ------------------------------------------------
+
             self.print_state(
+
                 step,
+
                 observation,
+
                 decision
             )
 
@@ -894,23 +1117,39 @@ Required format:
             # ------------------------------------------------
 
             if decision.get(
+
                 "stop",
+
                 False
+
             ):
 
                 print()
+
                 print(
-                    ">>> AGENT TERMINATED INVESTIGATION"
+                    ">>> AGENT TERMINATED "
+                    "INVESTIGATION"
                 )
 
                 print(
+
                     f">>> FINAL DIAGNOSIS: "
                     f"{decision.get('hypothesis')}"
                 )
 
                 print(
+
                     f">>> CONFIDENCE: "
                     f"{decision.get('confidence')}"
+                )
+
+                # Generate report
+
+                self.generate_investigation_report(
+
+                    environment,
+
+                    decision
                 )
 
                 return decision
@@ -920,6 +1159,7 @@ Required format:
             # ------------------------------------------------
 
             next_rate = decision.get(
+
                 "next_probe_rate_pps"
             )
 
@@ -930,28 +1170,43 @@ Required format:
                 )
 
             except (
+
                 TypeError,
+
                 ValueError
+
             ):
 
                 next_rate = None
 
-            # If Qwen gives a bad/duplicate rate,
-            # deterministic exploration chooses the
-            # next unused higher rate.
+            # ------------------------------------------------
+            # SAFETY CHECK FOR BAD QWEN RATE
+            # ------------------------------------------------
 
             if (
+
                 next_rate not in PROBE_RATES
+
                 or
+
                 next_rate in used_rates
+
             ):
 
                 higher_rates = sorted(
+
                     [
+
                         r
+
                         for r in PROBE_RATES
-                        if r > rate
-                        and r not in used_rates
+
+                        if (
+                            r > rate
+                            and
+                            r not in used_rates
+                        )
+
                     ]
                 )
 
@@ -962,8 +1217,11 @@ Required format:
                 else:
 
                     unused = [
+
                         r
+
                         for r in PROBE_RATES
+
                         if r not in used_rates
                     ]
 
@@ -977,54 +1235,110 @@ Required format:
 
             rate = next_rate
 
-        # ----------------------------------------------------
-        # MAXIMUM PROBE BUDGET
-        # ----------------------------------------------------
+        # ====================================================
+        # MAXIMUM PROBE BUDGET REACHED
+        # ====================================================
 
         print()
+
         print(
             ">>> MAXIMUM PROBE BUDGET REACHED"
         )
 
         final_evidence = calculate_evidence(
+
             self.observations
         )
 
         print(
+
             f">>> EVIDENCE ENGINE RESULT: "
             f"{final_evidence['classification']}"
         )
 
-        if final_evidence[
-            "classification"
-        ] != "UNCERTAIN":
+        if (
 
-            print(
-                f">>> FINAL DIAGNOSIS: "
-                f"{final_evidence['classification']}"
-            )
+            final_evidence["classification"]
 
-            return {
+            !=
+
+            "UNCERTAIN"
+
+        ):
+
+            final_decision = {
+
                 "hypothesis":
-                    final_evidence["classification"],
+                    final_evidence[
+                        "classification"
+                    ],
 
                 "confidence":
                     0.90,
+
+                "reasoning":
+                    "Final deterministic evidence "
+                    "classification after the maximum "
+                    "probe budget was reached.",
+
+                "evidence":
+                    final_evidence[
+                        "signals"
+                    ],
+
+                "next_probe_rate_pps":
+                    None,
 
                 "stop":
                     True
             }
 
+            print(
+
+                f">>> FINAL DIAGNOSIS: "
+                f"{final_decision['hypothesis']}"
+            )
+
+            # Generate report
+
+            self.generate_investigation_report(
+
+                environment,
+
+                final_decision
+            )
+
+            return final_decision
+
+        # ----------------------------------------------------
+        # FINAL QWEN DECISION
+        # ----------------------------------------------------
+
         final = self.ask_llm()
 
+        final = self.enforce_decision(
+            final
+        )
+
         print(
+
             f">>> FINAL DIAGNOSIS: "
             f"{final.get('hypothesis')}"
         )
 
         print(
+
             f">>> CONFIDENCE: "
             f"{final.get('confidence')}"
+        )
+
+        # Generate report
+
+        self.generate_investigation_report(
+
+            environment,
+
+            final
         )
 
         return final
@@ -1037,11 +1351,13 @@ Required format:
 def main():
 
     print()
+
     print(
         "Choose hidden simulation environment:"
     )
 
     print()
+
     print(
         "1. E0 - NORMAL"
     )
@@ -1057,30 +1373,41 @@ def main():
     print()
 
     choice = input(
+
         "Enter environment (1/2/3): "
     ).strip()
 
     environment_map = {
 
-        "1": "E0",
+        "1":
+            "E0",
 
-        "2": "E1",
+        "2":
+            "E1",
 
-        "3": "E2"
+        "3":
+            "E2"
     }
 
     if choice not in environment_map:
 
         raise SystemExit(
-            "\nInvalid choice. Enter 1, 2, or 3.\n"
+
+            "\nInvalid choice. "
+            "Enter 1, 2, or 3.\n"
         )
 
     agent = AutonomousPathProbe()
 
     agent.investigate(
+
         environment_map[choice]
     )
 
+
+# ============================================================
+# PROGRAM ENTRY POINT
+# ============================================================
 
 if __name__ == "__main__":
 
