@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PATHPROBE AI</title>
+<style>
+:root{font-family:Arial,Helvetica,sans-serif;color:#eaf0ff;background:#0b1220}
+*{box-sizing:border-box}body{margin:0;background:#0b1220;color:#eaf0ff;font-size:13px}
+header{padding:14px 16px;background:#111c31;border-bottom:1px solid #263653}
+h1{font-size:20px;margin:0}header p{margin:5px 0 0;color:#a8b8d4;font-size:11px}
+main{padding:12px;max-width:1000px;margin:auto}.row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.card{background:#121e33;border:1px solid #2b3b59;border-radius:8px;padding:11px;margin-bottom:10px;min-width:0}
+.label{color:#9fb2d1;font-size:10px;text-transform:uppercase;letter-spacing:.08em}
+.big{font-size:22px;font-weight:700;margin-top:5px;overflow-wrap:anywhere}
+h2{font-size:13px;margin:0 0 9px;color:#dce8ff}
+.muted{color:#9fb2d1;font-size:11px;line-height:1.45}
+.status{display:inline-block;border-radius:4px;padding:4px 7px;font-weight:bold;font-size:10px;background:#263653}
+.ok{color:#79e2a6}.warn{color:#ffd27a}.bad{color:#ff9292}
+button{background:#2e67d1;color:white;border:0;border-radius:5px;padding:9px 12px;font-weight:bold;cursor:pointer}
+button:disabled{opacity:.5;cursor:wait}
+input,textarea{width:100%;background:#0b1425;color:#eaf0ff;border:1px solid #354867;border-radius:5px;padding:9px;font:inherit}
+textarea{min-height:66px;resize:vertical}
+table{width:100%;border-collapse:collapse;font-size:11px}th,td{text-align:left;padding:7px 5px;border-bottom:1px solid #273650;vertical-align:top;overflow-wrap:anywhere}th{color:#9fb2d1;font-weight:600}
+.list{max-height:240px;overflow:auto}.path{border:1px solid #2c3f61;border-radius:6px;padding:9px;margin:7px 0;background:#0e192b}
+.path.best{border-color:#3eae7a;background:#10251f}.path-title{font-weight:bold;margin-bottom:5px}
+pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#09111f;border:1px solid #293b59;border-radius:5px;padding:10px;line-height:1.45;min-height:55px;margin:0}
+.actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px}
+.small{font-size:10px;color:#a8b8d4}.metric-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.metric{background:#0b1425;border-radius:5px;padding:7px}.metric b{display:block;margin-top:4px;font-size:12px}
+@media(max-width:560px){.row{grid-template-columns:1fr}.metric-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+</style>
+</head>
+<body>
+<header>
+  <h1>PATHPROBE AI</h1>
+  <p>Packet Tracer embedded copilot · one-time topology snapshot · candidate-path ranking</p>
+</header>
+<main>
+  <div class="card">
+    <div class="label">Collection status</div>
+    <div id="status" class="big">Waiting for Packet Tracer snapshot</div>
+    <div id="statusDetail" class="muted">This panel does not repeatedly scan the network.</div>
+  </div>
+  <div class="row">
+    <div class="card"><div class="label">Devices scanned</div><div class="big" id="deviceCount">—</div></div>
+    <div class="card"><div class="label">Link records</div><div class="big" id="linkCount">—</div></div>
+    <div class="card"><div class="label">Reported down links</div><div class="big" id="faultCount">—</div></div>
+  </div>
+  <div class="card">
+    <h2>Route-selection inputs</h2>
+    <div class="metric-grid">
+      <div class="metric"><span class="muted">Delay</span><b id="delayValue">Not measured</b></div>
+      <div class="metric"><span class="muted">Jitter</span><b id="jitterValue">Not measured</b></div>
+      <div class="metric"><span class="muted">Packet loss</span><b id="lossValue">Not measured</b></div>
+      <div class="metric"><span class="muted">Throughput</span><b id="throughputValue">Not measured</b></div>
+      <div class="metric"><span class="muted">Utilization</span><b id="utilValue">Not measured</b></div>
+      <div class="metric"><span class="muted">Reliability</span><b id="reliabilityValue">Not measured</b></div>
+    </div>
+    <p class="muted">Packet Tracer's topology/port scan does not itself provide measured end-to-end delay, jitter, loss, throughput, or utilization in this script. These values stay unknown unless a real measurement source supplies them; they are never fabricated. With no performance measurements, path ranking falls back to known link state and hop count.</p>
+  </div>
+  <div class="card">
+    <h2>Choose source and destination</h2>
+    <div class="row">
+      <div><label class="muted" for="source">Source device</label><input id="source" list="deviceNames" placeholder="Select/type source device"></div>
+      <div><label class="muted" for="destination">Destination device</label><input id="destination" list="deviceNames" placeholder="Select/type destination device"></div>
+      <div><label class="muted" for="message">Message / goal</label><input id="message" value="Choose the best available path for communication"></div>
+    </div>
+    <datalist id="deviceNames"></datalist>
+    <div class="actions">
+      <button id="rankButton" onclick="rankPaths()">FIND CANDIDATE PATHS</button>
+      <button id="aiButton" onclick="askOllama()">ASK OLLAMA TO SELECT</button>
+      <span class="small">Read-only: this recommends a path; it does not change Cisco routing.</span>
+    </div>
+  </div>
+  <div class="card">
+    <h2>Candidate paths</h2>
+    <div id="paths" class="muted">Waiting for the one-time topology snapshot.</div>
+  </div>
+  <div class="card">
+    <h2>Device inventory</h2>
+    <div class="list"><table><thead><tr><th>Device</th><th>Model</th><th>Ports</th></tr></thead><tbody id="devices"><tr><td colspan="3">Waiting…</td></tr></tbody></table></div>
+  </div>
+  <div class="card">
+    <h2>Connections</h2>
+    <div class="list"><table><thead><tr><th>Connection</th><th>Ports</th><th>State</th><th>Type</th></tr></thead><tbody id="links"><tr><td colspan="4">Waiting…</td></tr></tbody></table></div>
+  </div>
+  <div class="card">
+    <h2>Ollama recommendation / investigation log</h2>
+    <pre id="result">Waiting for snapshot…</pre>
+    <p class="muted">The Ollama call goes through the existing local backend at /api/analyze. The backend must pass candidate_paths and route_metrics to its Ollama prompt; otherwise it may ignore the path-ranking request. The current HTML/Script Module pair cannot modify a separate Python backend.</p>
+  </div>
+</main>
+<script>
+"use strict";
+window.pathprobeCurrentState = null;
+window.pathprobeCandidates = [];
+
+function byId(id){return document.getElementById(id);}
+function esc(v){return String(v==null?"":v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");}
+function setText(id,value){byId(id).textContent=value;}
+function updateNetworkState(input){
+  try{
+    var state=(typeof input==="string")?JSON.parse(input):input;
+    if(!state || !Array.isArray(state.devices) || !Array.isArray(state.links)) throw new Error("Invalid topology snapshot");
+    window.pathprobeCurrentState=state;
+    setText("status","Snapshot collected");
+    setText("statusDetail","Collected once at "+(state.collectionTimestamp||"unknown time")+". No repeated scan is running.");
+    setText("deviceCount",state.deviceCount==null?state.devices.length:state.deviceCount);
+    setText("linkCount",state.linkCount==null?state.links.length:state.linkCount);
+    setText("faultCount",state.faultCount==null?"Unknown":state.faultCount);
+    renderInventory(state); renderLinks(state); populateDeviceChoices(state);
+    setText("result","Topology snapshot received.\nSelect source and destination, then find candidate paths.");
+    if(state.collectionErrors && state.collectionErrors.length) {
+      setText("statusDetail",byId("statusDetail").textContent+" Collection warnings: "+state.collectionErrors.length+".");
+    }
+  }catch(e){setText("status","Snapshot error");setText("result","SNAPSHOT ERROR\n"+String(e));}
+}
+function renderInventory(s){
+  var rows=(s.devices||[]).map(function(d){
+    return "<tr><td>"+esc(d.name)+"</td><td>"+esc(d.model)+"</td><td>"+((d.ports||[]).length)+"</td></tr>";
+  });
+  byId("devices").innerHTML=rows.join("")||'<tr><td colspan="3">No devices</td></tr>';
+}
+function renderLinks(s){
+  var rows=(s.links||[]).map(function(l){
+    var a=l.endpoint1||{},b=l.endpoint2||{};
+    var up=(l.up===true),state=(l.up===false?"DOWN": "UNKNOWN");
+    return "<tr><td>"+esc(a.device)+" ↔ "+esc(b.device)+"</td><td>"+esc(a.port)+" ↔ "+esc(b.port)+"</td><td class='"+(up?"ok":(l.up===false?"bad":"warn"))+"'>"+state+"</td><td>"+esc(l.type||"Unknown")+"</td></tr>";
+  });
+  byId("links").innerHTML=rows.join("")||'<tr><td colspan="4">No links</td></tr>';
+}
+function populateDeviceChoices(s){
+  var names=(s.devices||[]).map(function(d){return d.name;}).filter(Boolean);
+  byId("deviceNames").innerHTML=names.map(function(n){return '<option value="'+esc(n)+'"></option>';}).join("");
+  if(names.length>=2){if(!byId("source").value)byId("source").value=names[0];if(!byId("destination").value)byId("destination").value=names[names.length-1];}
+}
+function buildAdjacency(s){
+  var adj={};
+  (s.devices||[]).forEach(function(d){if(d.name)adj[d.name]=adj[d.name]||[];});
+  (s.links||[]).forEach(function(l){
+    var a=l.endpoint1&&l.endpoint1.device,b=l.endpoint2&&l.endpoint2.device;
+    if(!a||!b||a==="Unknown"||b==="Unknown")return;
+    adj[a]=adj[a]||[];adj[b]=adj[b]||[];
+    var edge={id:l.id,a:a,b:b,up:l.up===true,known:(l.up===true||l.up===false),type:l.type||"Unknown",
+      metrics:l.metrics||{delay_ms:null,jitter_ms:null,packet_loss_pct:null,throughput_mbps:null,utilization_pct:null,reliability_pct:null}};
+    adj[a].push({to:b,edge:edge});adj[b].push({to:a,edge:edge});
+  });
+  return adj;
+}
+function enumeratePaths(s,src,dst,maxPaths,maxHops){
+  var adj=buildAdjacency(s),out=[];
+  if(!adj[src]||!adj[dst])return {paths:[],reason:"Source or destination is not present in the collected topology."};
+  if(src===dst)return {paths:[{nodes:[src],edges:[],hops:0}],reason:"Source and destination are the same device."};
+  var queue=[{node:src,nodes:[src],edges:[]}],expanded=0;
+  while(queue.length && out.length<maxPaths && expanded<10000){
+    var cur=queue.shift();expanded++;
+    if(cur.edges.length>=maxHops)continue;
+    (adj[cur.node]||[]).forEach(function(next){
+      if(cur.nodes.indexOf(next.to)>=0)return;
+      var nodes=cur.nodes.concat([next.to]),edges=cur.edges.concat([next.edge]);
+      if(next.to===dst){out.push({nodes:nodes,edges:edges,hops:edges.length});return;}
+      queue.push({node:next.to,nodes:nodes,edges:edges});
+    });
+  }
+  return {paths:out,reason:out.length?"":"No candidate path found within "+maxHops+" hops."};
+}
+function metricsForPath(p){
+  var names=["delay_ms","jitter_ms","packet_loss_pct","throughput_mbps","utilization_pct","reliability_pct"];
+  var out={};names.forEach(function(n){out[n]=null;});
+  // Only use actual per-link metrics if a future/connected measurement source supplies them.
+  names.forEach(function(n){
+    var vals=p.edges.map(function(e){return e.metrics&&Number.isFinite(Number(e.metrics[n]))?Number(e.metrics[n]):null;}).filter(function(v){return v!==null;});
+    if(vals.length===p.edges.length && vals.length){
+      if(n==="delay_ms"||n==="jitter_ms")out[n]=vals.reduce(function(a,b){return a+b;},0);
+      else if(n==="packet_loss_pct")out[n]=100*(1-vals.reduce(function(a,b){return a*(1-b/100);},1));
+      else if(n==="throughput_mbps")out[n]=Math.min.apply(null,vals);
+      else if(n==="utilization_pct")out[n]=Math.max.apply(null,vals);
+      else if(n==="reliability_pct")out[n]=vals.reduce(function(a,b){return a*b/100;},100);
+    }
+  });
+  return out;
+}
+function rankLocally(paths){
+  // Hard exclusion: any path containing a link explicitly reported down is not a viable recommendation.
+  paths.forEach(function(p){
+    p.downLinks=p.edges.filter(function(e){return e.up===false;}).length;
+    p.unknownLinks=p.edges.filter(function(e){return e.known!==true;}).length;
+    p.metrics=metricsForPath(p);
+    var m=p.metrics,score=0,parts=[];
+    if(p.downLinks){score+=100000*p.downLinks;parts.push("contains reported-down link");}
+    score+=p.hops*10;parts.push("hop count "+p.hops);
+    if(m.delay_ms!==null){score+=m.delay_ms;parts.push("measured delay "+m.delay_ms+" ms");}
+    if(m.jitter_ms!==null){score+=m.jitter_ms*2;parts.push("measured jitter "+m.jitter_ms+" ms");}
+    if(m.packet_loss_pct!==null){score+=m.packet_loss_pct*20;parts.push("measured loss "+m.packet_loss_pct+"%");}
+    if(m.utilization_pct!==null){score+=m.utilization_pct*.2;parts.push("measured utilization "+m.utilization_pct+"%");}
+    if(m.throughput_mbps!==null && m.throughput_mbps>0){score+=1000/m.throughput_mbps;parts.push("measured throughput "+m.throughput_mbps+" Mbps");}
+    p.localScore=score;p.scoreExplanation=parts.join("; ");
+  });
+  paths.sort(function(a,b){return a.localScore-b.localScore;});
+  return paths;
+}
+function rankPaths(){
+  var s=window.pathprobeCurrentState;
+  if(!s){setText("result","No topology snapshot received yet.");return;}
+  var src=byId("source").value.trim(),dst=byId("destination").value.trim();
+  if(!src||!dst){setText("result","Enter a source and destination device.");return;}
+  var found=enumeratePaths(s,src,dst,8,12);
+  if(!found.paths.length){window.pathprobeCandidates=[];byId("paths").textContent=found.reason;setText("result",found.reason);return;}
+  window.pathprobeCandidates=rankLocally(found.paths);
+  renderPaths(window.pathprobeCandidates);
+  setText("result","Found "+window.pathprobeCandidates.length+" candidate path(s).\nLocal ranking uses only observed link states, hop count, and performance metrics if supplied. No delay/jitter/loss/throughput values are fabricated.\nClick ASK OLLAMA TO SELECT for a recommendation.");
+}
+function renderPaths(paths){
+  byId("paths").innerHTML=paths.map(function(p,i){
+    var m=p.metrics;
+    var metricText="Delay "+fmt(m.delay_ms," ms")+" · Jitter "+fmt(m.jitter_ms," ms")+" · Loss "+fmt(m.packet_loss_pct,"%")+" · Throughput "+fmt(m.throughput_mbps," Mbps")+" · Utilization "+fmt(m.utilization_pct,"%");
+    return '<div class="path '+(i===0?"best":"")+'"><div class="path-title">'+(i===0?"Current local best candidate":"Candidate "+(i+1))+' · '+p.hops+' hops</div><div>'+p.nodes.map(esc).join(" → ")+'</div><div class="muted">'+esc(metricText)+'</div><div class="small">Down links: '+p.downLinks+' · Unknown-state links: '+p.unknownLinks+' · Ranking basis: '+esc(p.scoreExplanation)+'</div></div>';
+  }).join("");
+}
+function fmt(v,suffix){return v===null||v===undefined?"Not measured":Number(v.toFixed(3))+suffix;}
+async function askOllama(){
+  var s=window.pathprobeCurrentState,paths=window.pathprobeCandidates;
+  if(!s){setText("result","No topology snapshot received.");return;}
+  if(!paths||!paths.length){rankPaths();paths=window.pathprobeCandidates;}
+  if(!paths||!paths.length){setText("result","No candidate path to send to the AI.");return;}
+  var btn=byId("aiButton");btn.disabled=true;btn.textContent="ASKING OLLAMA…";
+  var payload={
+    question:"Select the best candidate path for the requested communication. Compare only supplied observations and metrics. Prefer paths without reported-down links. Optimize measured delay, jitter, packet loss, throughput, utilization and reliability when values are available. If performance metrics are missing, say so and use hop count only as a limited fallback. Do not invent measurements. Explain the choice and its limitations. User goal: "+byId("message").value.trim(),
+    task:"rank_network_candidate_paths",
+    topology:{devices:s.devices,links:s.links,deviceCount:s.deviceCount,linkCount:s.linkCount,collectionTimestamp:s.collectionTimestamp},
+    candidate_paths:paths.map(function(p,i){return {rank:i+1,nodes:p.nodes,hops:p.hops,downLinks:p.downLinks,unknownLinks:p.unknownLinks,metrics:p.metrics,localScore:p.localScore,scoreExplanation:p.scoreExplanation};}),
+    route_metrics_policy:{
+      available_metrics:["delay_ms","jitter_ms","packet_loss_pct","throughput_mbps","utilization_pct","reliability_pct"],
+      missing_metric_rule:"null means not measured; never infer or fabricate a value",
+      down_link_rule:"do not recommend paths containing links explicitly reported down if any viable alternative exists",
+      routing_rule:"recommendation only; do not change device configuration or claim packets are forced along this path"
+    },
+    observations:[{source:"Packet Tracer Script Module",type:"one_time_topology_snapshot",timestamp:s.collectionTimestamp,device_count:s.deviceCount,link_count:s.linkCount,reported_down_link_count:s.faultCount,collection_errors:s.collectionErrors||[]}]
+  };
+  setText("result","Sending candidate paths and available metrics to local backend /api/analyze…\nEnsure the backend forwards candidate_paths and route_metrics_policy to Ollama.");
+  try{
+    var resp=await fetch("http://127.0.0.1:8000/api/analyze",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
+    var raw=await resp.text(),data;
+    try{data=JSON.parse(raw);}catch(e){throw new Error("Backend returned non-JSON HTTP "+resp.status+": "+raw.slice(0,400));}
+    if(!resp.ok)throw new Error("Backend HTTP "+resp.status+": "+(data.detail||data.message||resp.statusText));
+    var answer=data.answer||data.diagnosis||data.message||JSON.stringify(data,null,2);
+    setText("result","PATHPROBE AI — PATH RECOMMENDATION\n\n"+answer+"\n\nCANDIDATES SENT: "+paths.length+"\nMETRIC POLICY: Missing measurements remain unknown.\nACTION: Recommendation only; Packet Tracer routing was not changed.");
+  }catch(e){
+    setText("result","AI REQUEST FAILED\n"+String(e)+"\n\nThe local route candidates are still shown above. Check that the existing Python backend is running and that /api/analyze passes candidate_paths and route_metrics_policy to Ollama.");
+  }finally{btn.disabled=false;btn.textContent="ASK OLLAMA TO SELECT";}
+}
+</script>
+</body>
+</html>

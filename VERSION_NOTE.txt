@@ -1,0 +1,7 @@
+PATHPROBE AI source recovery note
+
+These are the latest complete source files that were directly recoverable from the available stored conversation files in this session:
+- Interface0.htm: PATHPROBE_AI_Interface0.htm (stored 2026-10-29 04:38 UTC)
+- ScriptEngine.js: PATHPROBE_AI_ScriptEngine_Fixed.js (stored 2026-10-29 05:17 UTC)
+
+Important: These are NOT verified to be the later PATHPROBE_AI_Native_PDU_After_Selected_Path.zip version mentioned in conversation history. The recovered ScriptEngine source does not contain the native Simple PDU addSimplePdu integration. Do not overwrite a newer working copy without comparing it first.
