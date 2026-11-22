@@ -1,0 +1,47 @@
+PATHPROBE AI — API integration additions
+========================================
+
+Keep the working pathprobe_backend.py intact until you back it up.
+
+1. Copy measurement_engine.py and agent_tools.py into C:\PATHPROBE_AI\.
+
+2. Add these imports near the top of pathprobe_backend.py:
+
+    from pathlib import Path
+    from measurement_engine import build_measurement_report, append_jsonl
+    from agent_tools import tool_registry, run_tool
+
+3. Add these endpoints to pathprobe_backend.py (below the existing endpoints):
+
+    @app.get("/api/tools")
+    async def get_tools():
+        return {"tools": tool_registry()}
+
+    @app.post("/api/measurements/report")
+    async def measurements_report(request: DiagnosisRequest):
+        report = build_measurement_report(
+            request.topology,
+            request.observations
+        )
+        append_jsonl(report, Path(__file__).parent / "logs" / "measurements.jsonl")
+        return report
+
+    @app.post("/api/tools/{tool_name}")
+    async def execute_read_only_tool(tool_name: str, request: DiagnosisRequest):
+        result = run_tool(tool_name, request.topology, request.observations)
+        if result.get("status") == "rejected":
+            raise HTTPException(status_code=400, detail=result["error"])
+        return result
+
+4. Restart the backend and test:
+
+    Invoke-RestMethod http://127.0.0.1:8000/api/tools
+
+The current HTML already sends a topology snapshot to /api/analyze. To create a
+measurement report through the UI, the HTML needs one additional request to
+/api/measurements/report. We should add that after the new endpoint is verified.
+
+The report endpoint stores reports in:
+    C:\PATHPROBE_AI\logs\measurements.jsonl
+
+Do not add arbitrary shell/CLI execution or automatic device changes.
